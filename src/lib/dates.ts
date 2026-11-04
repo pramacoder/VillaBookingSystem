@@ -1,6 +1,6 @@
 export const PROPERTY_TIMEZONE = "Asia/Makassar";
 
-const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
+export const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MS_PER_DAY = 86_400_000;
 
 /**
@@ -90,6 +90,8 @@ export function getPropertyToday(
 ): Date {
   return parseDateOnly(getPropertyTodayString(now, timeZone));
 }
+
+export const todayInPropertyTz = getPropertyToday;
 
 /**
  * Adds a signed integer number of calendar days to a date-only value.
