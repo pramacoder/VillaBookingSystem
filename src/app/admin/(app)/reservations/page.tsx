@@ -300,7 +300,11 @@ export default async function AdminReservationsPage({ searchParams }: AdminReser
                     </div>
                   </TableCell>
                   <TableCell>
-                    <ReservationStatusBadge status={item.status} locale={locale} />
+                    <ReservationStatusBadge
+                      status={item.status}
+                      createdAt={item.createdAt}
+                      locale={locale}
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1.5">

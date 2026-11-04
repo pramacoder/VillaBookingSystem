@@ -69,6 +69,7 @@ export default async function AdminReservationDetailPage({ params }: Reservation
     internalNotes: detail.internalNotes,
     cancelReason: detail.cancelReason,
     version: detail.version,
+    createdAt: detail.createdAt,
     allowedNextStatuses: detail.allowedNextStatuses,
     unit: detail.unit,
     guest: detail.guest,

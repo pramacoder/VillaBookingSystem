@@ -82,15 +82,57 @@ export function getReservationStatusMeta(
   };
 }
 
+export function isReservationPendingStale(
+  status: ReservationStatus,
+  createdAt: Date | string,
+  now: Date = new Date(),
+): boolean {
+  if (status !== "PENDING") return false;
+  const createdTime =
+    typeof createdAt === "string" ? new Date(createdAt).getTime() : createdAt.getTime();
+  const diffMs = now.getTime() - createdTime;
+  return diffMs > 24 * 60 * 60 * 1000;
+}
+
+export function PendingStaleBadge({
+  locale = "en",
+  className,
+}: {
+  locale?: SupportedLocale;
+  className?: string;
+}) {
+  const isId = locale === "id";
+  return (
+    <StatusBadge
+      variant="warning"
+      label={isId ? "Menunggu (>24 jam)" : "Pending (>24h)"}
+      className={className}
+    />
+  );
+}
+
 export function ReservationStatusBadge({
   status,
+  createdAt,
   locale = "en",
   className,
 }: {
   status: ReservationStatus;
+  createdAt?: Date | string;
   locale?: SupportedLocale;
   className?: string;
 }) {
+  const isStale = createdAt ? isReservationPendingStale(status, createdAt) : false;
+  if (status === "PENDING" && isStale) {
+    const isId = locale === "id";
+    return (
+      <StatusBadge
+        variant="warning"
+        label={isId ? "Menunggu (>24 jam)" : "Pending (>24h)"}
+        className={className}
+      />
+    );
+  }
   const { variant, label } = getReservationStatusMeta(status, locale);
   return <StatusBadge variant={variant} label={label} className={className} />;
 }

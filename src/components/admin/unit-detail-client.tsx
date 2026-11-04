@@ -12,6 +12,7 @@ import {
   Plus,
   Settings,
   Sparkles,
+  Tag,
   Trash2,
   Wrench,
 } from "lucide-react";
@@ -19,6 +20,7 @@ import type { Amenity, UserRole } from "@prisma/client";
 import type { UnitDetailResult } from "@/server/services/unit-service";
 import type { AppLocale, AppMessages } from "@/lib/i18n/messages";
 import { addDays, formatDateOnly, parseDateOnly } from "@/lib/dates";
+import { formatIdr } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog, Dialog } from "@/components/ui/dialog";
 import { FormField, Input, Textarea } from "@/components/ui/input";
@@ -56,9 +58,9 @@ export function UnitDetailClient({
   const { pushToast } = useToast();
   const isAdmin = userRole === "ADMIN";
 
-  const [activeTab, setActiveTab] = React.useState<"specs" | "amenities" | "images" | "blocks">(
-    "specs",
-  );
+  const [activeTab, setActiveTab] = React.useState<
+    "specs" | "amenities" | "images" | "blocks" | "rates"
+  >("specs");
 
   // Specifications form state
   const [nameEn, setNameEn] = React.useState(unit.nameEn);
@@ -127,6 +129,21 @@ export function UnitDetailClient({
   // Delete block state
   const [deletingBlockId, setDeletingBlockId] = React.useState<string | null>(null);
   const [isDeletingBlock, setIsDeletingBlock] = React.useState(false);
+
+  // Rate Rules state (P1)
+  const [addRateRuleOpen, setAddRateRuleOpen] = React.useState(false);
+  const [rateLabel, setRateLabel] = React.useState("");
+  const [rateStartDate, setRateStartDate] = React.useState(todayString);
+  const [rateEndDate, setRateEndDate] = React.useState(
+    formatDateOnly(addDays(parseDateOnly(todayString), 7)),
+  );
+  const [rateNightlyRate, setRateNightlyRate] = React.useState(unit.baseRateIdr);
+  const [rateMinNights, setRateMinNights] = React.useState<number | "">("");
+  const [savingRateRule, setSavingRateRule] = React.useState(false);
+  const [rateRuleError, setRateRuleError] = React.useState<string | null>(null);
+
+  const [deletingRateRuleId, setDeletingRateRuleId] = React.useState<string | null>(null);
+  const [isDeletingRateRule, setIsDeletingRateRule] = React.useState(false);
 
   const isDraft = unit.status === "DRAFT";
 
@@ -453,6 +470,98 @@ export function UnitDetailClient({
     }
   }
 
+  async function handleCreateRateRule(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isAdmin) return;
+    setRateRuleError(null);
+    setSavingRateRule(true);
+
+    try {
+      const res = await fetch(`/api/admin/units/${unit.id}/rate-rules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: rateLabel.trim(),
+          startDate: rateStartDate,
+          endDate: rateEndDate,
+          nightlyRateIdr: Number(rateNightlyRate),
+          minNights: rateMinNights === "" ? null : Number(rateMinNights),
+        }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        setRateRuleError(payload.error?.message ?? "Failed to save rate rule.");
+        return;
+      }
+
+      pushToast({
+        kind: "success",
+        title: locale === "id" ? "Tarif Musiman Disimpan" : "Rate Rule Created",
+        description: payload.data?.label,
+      });
+
+      setAddRateRuleOpen(false);
+      setRateLabel("");
+      setRateStartDate(todayString);
+      setRateEndDate(formatDateOnly(addDays(parseDateOnly(todayString), 7)));
+      setRateNightlyRate(unit.baseRateIdr);
+      setRateMinNights("");
+      router.refresh();
+    } catch (err: unknown) {
+      setRateRuleError(
+        err instanceof Error
+          ? err.message
+          : locale === "id"
+            ? "Gagal menghubungi server saat menyimpan tarif."
+            : "Network error while saving rate rule.",
+      );
+    } finally {
+      setSavingRateRule(false);
+    }
+  }
+
+  async function handleDeleteRateRule() {
+    if (!isAdmin || !deletingRateRuleId) return;
+    setIsDeletingRateRule(true);
+
+    try {
+      const res = await fetch(`/api/admin/units/${unit.id}/rate-rules/${deletingRateRuleId}`, {
+        method: "DELETE",
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        pushToast({
+          kind: "error",
+          title: locale === "id" ? "Gagal Menghapus" : "Delete Failed",
+          description: payload.error?.message ?? "Could not delete rate rule.",
+        });
+        return;
+      }
+
+      pushToast({
+        kind: "success",
+        title: locale === "id" ? "Tarif Dihapus" : "Rate Rule Deleted",
+        description:
+          locale === "id"
+            ? "Aturan tarif musiman telah dihapus."
+            : "Seasonal rate rule has been removed.",
+      });
+
+      setDeletingRateRuleId(null);
+      router.refresh();
+    } catch (err: unknown) {
+      pushToast({
+        kind: "error",
+        title: locale === "id" ? "Gagal Menghapus" : "Delete Failed",
+        description: err instanceof Error ? err.message : "Could not delete rate rule.",
+      });
+    } finally {
+      setIsDeletingRateRule(false);
+    }
+  }
+
   // Group amenities by category
   const amenitiesByCategory = React.useMemo(() => {
     const map = new Map<string, Amenity[]>();
@@ -572,6 +681,22 @@ export function UnitDetailClient({
           <span>{messages.admin.unitDetail.blocksSectionTitle}</span>
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
             {unit.blocks.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("rates")}
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 font-sans text-sm font-medium transition-colors ${
+            activeTab === "rates"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900"
+          }`}
+        >
+          <Tag className="h-4 w-4" />
+          <span>{messages.admin.unitDetail.ratesSectionTitle}</span>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+            {unit.rateRules?.length || 0}
           </span>
         </button>
       </nav>
@@ -1161,6 +1286,90 @@ export function UnitDetailClient({
         </div>
       )}
 
+      {/* Tab 5: Seasonal Rates & Override Rules */}
+      {activeTab === "rates" && (
+        <div className="rounded-[8px] border border-gray-100 bg-white p-6 shadow-sm space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-gray-800">
+                {messages.admin.unitDetail.ratesSectionTitle}
+              </h2>
+              <p className="font-sans text-xs text-gray-600 mt-1">
+                {locale === "id"
+                  ? "Aturan tarif musiman menggantikan tarif dasar per malam. Aturan paling spesifik dan terbaru yang akan berlaku (PRD P1, DATABASE §6)."
+                  : "Seasonal rate rules override base nightly rates for specific date ranges. The most specific rule wins (PRD P1, DATABASE §6)."}
+              </p>
+            </div>
+            {isAdmin && (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setRateRuleError(null);
+                  setAddRateRuleOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                <span>{messages.admin.unitDetail.addRateRuleButton}</span>
+              </Button>
+            )}
+          </div>
+
+          {!unit.rateRules || unit.rateRules.length === 0 ? (
+            <EmptyState
+              title={messages.admin.unitDetail.emptyRateRulesTitle}
+              description={messages.admin.unitDetail.emptyRateRulesDescription}
+            />
+          ) : (
+            <div className="overflow-hidden rounded-[8px] border border-gray-100">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{messages.admin.unitDetail.rateRuleLabel}</TableHead>
+                    <TableHead>{messages.admin.unitDetail.rateRuleStartDate}</TableHead>
+                    <TableHead>{messages.admin.unitDetail.rateRuleEndDate}</TableHead>
+                    <TableHead numeric>{messages.admin.unitDetail.rateRuleNightlyRate}</TableHead>
+                    <TableHead numeric>{messages.admin.unitDetail.rateRuleMinNights}</TableHead>
+                    {isAdmin && <TableHead className="w-16 text-right" />}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {unit.rateRules.map((rule) => (
+                    <TableRow key={rule.id}>
+                      <TableCell className="font-medium text-gray-800">{rule.label}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {formatDateOnly(rule.startDate)}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {formatDateOnly(rule.endDate)}
+                      </TableCell>
+                      <TableCell numeric className="font-medium">
+                        {formatIdr(rule.nightlyRateIdr, locale)}
+                      </TableCell>
+                      <TableCell numeric className="text-xs text-gray-600">
+                        {rule.minNights ? `${rule.minNights}n` : "—"}
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingRateRuleId(rule.id)}
+                            className="text-status-danger-fg hover:bg-status-danger-bg"
+                            aria-label={`${messages.admin.unitDetail.rateRuleDelete} ${rule.label}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Add Image Dialog */}
       <Dialog
         open={addImageOpen}
@@ -1464,6 +1673,138 @@ export function UnitDetailClient({
         confirmActionLabel={messages.admin.calendarPage.deleteBlock}
         isDestructive
         isSubmitting={isDeletingBlock}
+      />
+
+      {/* Add Rate Rule Dialog */}
+      <Dialog
+        open={addRateRuleOpen}
+        onClose={() => {
+          if (!savingRateRule) setAddRateRuleOpen(false);
+        }}
+        title={messages.admin.unitDetail.addRateRuleButton}
+        description={
+          locale === "id"
+            ? "Tentukan periode tanggal dan tarif khusus yang berlaku untuk unit ini."
+            : "Define a date range and seasonal rate override for this villa unit."
+        }
+      >
+        <form onSubmit={handleCreateRateRule} className="space-y-4">
+          {rateRuleError && (
+            <div
+              role="alert"
+              className="rounded-[6px] border border-status-danger-fg/30 bg-status-danger-bg p-3 text-xs text-status-danger-fg"
+            >
+              {rateRuleError}
+            </div>
+          )}
+
+          <FormField
+            id="rate-label"
+            label={messages.admin.unitDetail.rateRuleLabel}
+            required
+          >
+            <Input
+              id="rate-label"
+              value={rateLabel}
+              onChange={(e) => setRateLabel(e.target.value)}
+              placeholder="e.g. High Season 2026 / Lebaran Holiday"
+              required
+              maxLength={100}
+            />
+          </FormField>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              id="rate-start-date"
+              label={messages.admin.unitDetail.rateRuleStartDate}
+              required
+            >
+              <Input
+                id="rate-start-date"
+                type="date"
+                value={rateStartDate}
+                onChange={(e) => setRateStartDate(e.target.value)}
+                required
+              />
+            </FormField>
+
+            <FormField
+              id="rate-end-date"
+              label={messages.admin.unitDetail.rateRuleEndDate}
+              required
+            >
+              <Input
+                id="rate-end-date"
+                type="date"
+                value={rateEndDate}
+                min={rateStartDate}
+                onChange={(e) => setRateEndDate(e.target.value)}
+                required
+              />
+            </FormField>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              id="rate-nightly-rate"
+              label={messages.admin.unitDetail.rateRuleNightlyRate}
+              required
+            >
+              <Input
+                id="rate-nightly-rate"
+                type="number"
+                min={1}
+                max={2000000000}
+                value={rateNightlyRate}
+                onChange={(e) => setRateNightlyRate(Number(e.target.value))}
+                required
+              />
+            </FormField>
+
+            <FormField
+              id="rate-min-nights"
+              label={messages.admin.unitDetail.rateRuleMinNights}
+            >
+              <Input
+                id="rate-min-nights"
+                type="number"
+                min={1}
+                max={365}
+                value={rateMinNights}
+                onChange={(e) =>
+                  setRateMinNights(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                placeholder="1"
+              />
+            </FormField>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={savingRateRule}
+              onClick={() => setAddRateRuleOpen(false)}
+            >
+              {messages.admin.common.cancel}
+            </Button>
+            <Button type="submit" variant="primary" isLoading={savingRateRule}>
+              {messages.admin.common.save}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Delete Rate Rule Dialog */}
+      <ConfirmActionDialog
+        open={deletingRateRuleId !== null}
+        onClose={() => setDeletingRateRuleId(null)}
+        onConfirm={handleDeleteRateRule}
+        title={messages.admin.unitDetail.rateRuleDeleteConfirmTitle}
+        description={messages.admin.unitDetail.rateRuleDeleteConfirmDescription}
+        confirmActionLabel={messages.admin.unitDetail.rateRuleDelete}
+        isDestructive
+        isSubmitting={isDeletingRateRule}
       />
     </div>
   );

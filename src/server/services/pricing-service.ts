@@ -53,7 +53,7 @@ function toDateOnly(value: Date | string): Date {
  * Selects the most specific RateRule covering night `d` (DATABASE.md §6, TC-P02).
  * Specificity is determined by the shortest date span `(endDate - startDate)`.
  */
-function findApplicableRateRule(
+export function findApplicableRateRule(
   nightDate: Date,
   rateRules: readonly RateRuleInput[],
 ): { rateIdr: number; label: string } | null {

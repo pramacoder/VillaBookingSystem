@@ -1,7 +1,8 @@
-import type { Amenity, Prisma, PrismaClient, Unit, UnitBlock, UnitImage } from "@prisma/client";
-import { formatDateOnly, todayInPropertyTz } from "@/lib/dates";
+import type { Amenity, Prisma, PrismaClient, RateRule, Unit, UnitBlock, UnitImage } from "@prisma/client";
+import { formatDateOnly, parseDateOnly, todayInPropertyTz } from "@/lib/dates";
 import { AppError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import {
+  createRateRuleSchema,
   createUnitImageSchema,
   createUnitSchema,
   listUnitsQuerySchema,
@@ -78,6 +79,7 @@ export interface UnitDetailResult extends Unit {
   }>;
   images: UnitImage[];
   blocks: UnitBlock[];
+  rateRules: RateRule[];
   activeReservationsCount: number;
 }
 
@@ -99,6 +101,9 @@ export async function getUnitDetail(
       blocks: {
         orderBy: { startDate: "desc" },
       },
+      rateRules: {
+        orderBy: [{ startDate: "asc" }, { id: "asc" }],
+      },
       _count: {
         select: {
           reservations: {
@@ -118,6 +123,7 @@ export async function getUnitDetail(
   return {
     ...unit,
     amenities: unit.amenities.map((ua) => ua.amenity),
+    rateRules: unit.rateRules,
     activeReservationsCount: unit._count.reservations,
   };
 }
@@ -560,6 +566,114 @@ export async function deleteUnitBlockService(
 export async function listAllAmenities(prisma: PrismaClient): Promise<Amenity[]> {
   return prisma.amenity.findMany({
     orderBy: [{ category: "asc" }, { nameEn: "asc" }],
+  });
+}
+
+// ==========================================
+// RATE RULES SERVICES (API §5.1, DATABASE §6, PRD P1)
+// ==========================================
+
+export async function listRateRules(
+  prisma: PrismaClient,
+  unitId: string,
+): Promise<RateRule[]> {
+  const unit = await prisma.unit.findUnique({
+    where: { id: unitId },
+    select: { id: true },
+  });
+
+  if (!unit) {
+    throw new NotFoundError("Unit not found.");
+  }
+
+  return prisma.rateRule.findMany({
+    where: { unitId },
+    orderBy: [{ startDate: "asc" }, { id: "asc" }],
+  });
+}
+
+export async function createRateRule(
+  prisma: PrismaClient,
+  unitId: string,
+  rawInput: unknown,
+  actorId: string,
+): Promise<RateRule> {
+  const input = createRateRuleSchema.parse(rawInput);
+  const startDate = parseDateOnly(input.startDate);
+  const endDate = parseDateOnly(input.endDate);
+
+  return prisma.$transaction(async (tx) => {
+    const unit = await tx.unit.findUnique({
+      where: { id: unitId },
+      select: { id: true, nameEn: true },
+    });
+
+    if (!unit) {
+      throw new NotFoundError("Unit not found.");
+    }
+
+    const created = await tx.rateRule.create({
+      data: {
+        unitId,
+        label: input.label,
+        startDate,
+        endDate,
+        nightlyRateIdr: input.nightlyRateIdr,
+        minNights: input.minNights ?? null,
+      },
+    });
+
+    await writeAuditLog(tx, {
+      actorId,
+      action: "unit_rate_rule.create",
+      entityType: "RateRule",
+      entityId: created.id,
+      metadata: {
+        unitId,
+        label: created.label,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        nightlyRateIdr: created.nightlyRateIdr,
+        minNights: created.minNights,
+      },
+    });
+
+    return created;
+  });
+}
+
+export async function deleteRateRule(
+  prisma: PrismaClient,
+  unitId: string,
+  ruleId: string,
+  actorId: string,
+): Promise<void> {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.rateRule.findFirst({
+      where: { id: ruleId, unitId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError("Rate rule not found.");
+    }
+
+    await tx.rateRule.delete({
+      where: { id: ruleId },
+    });
+
+    await writeAuditLog(tx, {
+      actorId,
+      action: "unit_rate_rule.delete",
+      entityType: "RateRule",
+      entityId: ruleId,
+      metadata: {
+        unitId,
+        label: existing.label,
+        startDate: formatDateOnly(existing.startDate),
+        endDate: formatDateOnly(existing.endDate),
+        nightlyRateIdr: existing.nightlyRateIdr,
+      },
+    });
   });
 }
 

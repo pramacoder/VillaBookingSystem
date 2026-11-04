@@ -242,7 +242,11 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                         {formatDateOnly(res.checkIn)} → {formatDateOnly(res.checkOut)}
                       </TableCell>
                       <TableCell>
-                        <ReservationStatusBadge status={res.status} locale={locale} />
+                        <ReservationStatusBadge
+                          status={res.status}
+                          createdAt={res.createdAt}
+                          locale={locale}
+                        />
                       </TableCell>
                       <TableCell>
                         <PaymentStatusBadge

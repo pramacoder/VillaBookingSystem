@@ -86,6 +86,7 @@ export interface SerializedReservationDetail {
   internalNotes: string | null;
   cancelReason: string | null;
   version: number;
+  createdAt: string;
   allowedNextStatuses: readonly ReservationStatus[];
   unit: {
     id: string;
@@ -413,7 +414,11 @@ export function ReservationDetailClient({
             <h1 className="font-display text-3xl font-semibold text-gray-800 tabular-nums">
               {reservation.code}
             </h1>
-            <ReservationStatusBadge status={reservation.status} locale={locale} />
+            <ReservationStatusBadge
+              status={reservation.status}
+              createdAt={reservation.createdAt}
+              locale={locale}
+            />
             <PaymentStatusBadge status={reservation.paymentStatus} locale={locale} />
             <span className="rounded-[6px] border border-gray-100 bg-white px-2.5 py-1 font-sans text-xs font-medium text-gray-600 tabular-nums">
               {d.versionBadge.replace("{version}", String(reservation.version))}

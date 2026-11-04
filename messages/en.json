@@ -302,6 +302,7 @@
       "colActions": "Actions",
       "refundPendingBadge": "Refund pending",
       "overpaidBadge": "Overpaid",
+      "pendingStaleBadge": "Pending (>24h)",
       "emptyTitle": "No reservations match the current filters",
       "emptyDescription": "Try clearing your search filters or create a new staff reservation."
     },
@@ -506,7 +507,19 @@
       "deleteImage": "Delete image",
       "deleteImageConfirmTitle": "Delete unit image",
       "deleteImageConfirmDescription": "This will remove the image from the unit gallery and asset manifest.",
-      "blocksSectionTitle": "Maintenance & Admin Blocks"
+      "blocksSectionTitle": "Maintenance & Admin Blocks",
+      "ratesSectionTitle": "Seasonal Rates & Override Rules",
+      "addRateRuleButton": "Add seasonal rate",
+      "rateRuleLabel": "Season label",
+      "rateRuleStartDate": "Start date",
+      "rateRuleEndDate": "End date",
+      "rateRuleNightlyRate": "Nightly rate (IDR)",
+      "rateRuleMinNights": "Min nights (optional)",
+      "rateRuleDelete": "Delete rule",
+      "rateRuleDeleteConfirmTitle": "Delete seasonal rate rule",
+      "rateRuleDeleteConfirmDescription": "This will remove the seasonal price override for this unit.",
+      "emptyRateRulesTitle": "No seasonal rate rules",
+      "emptyRateRulesDescription": "This unit currently uses its base rate for all dates. Add rules for high season, holidays, or special periods."
     },
     "reportsPage": {
       "tabReservations": "Reservations",

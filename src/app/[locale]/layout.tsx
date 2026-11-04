@@ -3,11 +3,9 @@ import { PublicHeader } from "@/components/public/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import type { AppLocale } from "@/lib/i18n/messages";
 
-export const dynamic = "force-dynamic";
-
 interface PublicLayoutProps {
   children: React.ReactNode;
-  params: Promise<Record<string, string | string[] | undefined>>;
+  params: Promise<{ locale: string }>;
 }
 
 export default async function PublicLayout({ children, params }: PublicLayoutProps) {

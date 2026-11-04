@@ -302,6 +302,7 @@
       "colActions": "Aksi",
       "refundPendingBadge": "Menunggu pengembalian dana",
       "overpaidBadge": "Kelebihan bayar",
+      "pendingStaleBadge": "Menunggu (>24 jam)",
       "emptyTitle": "Tidak ada reservasi yang sesuai dengan filter saat ini",
       "emptyDescription": "Coba atur ulang filter pencarian atau buat reservasi staf baru."
     },
@@ -506,7 +507,19 @@
       "deleteImage": "Hapus foto",
       "deleteImageConfirmTitle": "Hapus foto unit",
       "deleteImageConfirmDescription": "Tindakan ini akan menghapus foto dari galeri unit dan manifes aset.",
-      "blocksSectionTitle": "Blok Pemeliharaan & Admin"
+      "blocksSectionTitle": "Blok Pemeliharaan & Admin",
+      "ratesSectionTitle": "Tarif Musiman & Aturan Khusus",
+      "addRateRuleButton": "Tambah tarif musiman",
+      "rateRuleLabel": "Label musim",
+      "rateRuleStartDate": "Tanggal mulai",
+      "rateRuleEndDate": "Tanggal selesai",
+      "rateRuleNightlyRate": "Tarif per malam (IDR)",
+      "rateRuleMinNights": "Min malam (opsional)",
+      "rateRuleDelete": "Hapus aturan",
+      "rateRuleDeleteConfirmTitle": "Hapus aturan tarif musiman",
+      "rateRuleDeleteConfirmDescription": "Tindakan ini akan menghapus penyesuaian tarif musiman untuk unit ini.",
+      "emptyRateRulesTitle": "Belum ada aturan tarif musiman",
+      "emptyRateRulesDescription": "Unit ini saat ini menggunakan tarif dasar untuk semua tanggal. Tambahkan aturan untuk musim ramai, liburan, atau periode khusus."
     },
     "reportsPage": {
       "tabReservations": "Reservasi",

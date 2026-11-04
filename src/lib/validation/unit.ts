@@ -118,6 +118,24 @@ export const calendarQuerySchema = z
   })
   .strict();
 
+export const createRateRuleSchema = z
+  .object({
+    label: z.string().trim().min(1, "Label is required.").max(100),
+    startDate: dateOnlyString,
+    endDate: dateOnlyString,
+    nightlyRateIdr: z
+      .number()
+      .int()
+      .positive("Nightly rate must be greater than zero.")
+      .max(2_000_000_000),
+    minNights: z.number().int().min(1).max(365).optional().nullable(),
+  })
+  .strict()
+  .refine((data) => data.endDate >= data.startDate, {
+    message: "End date must be on or after start date.",
+    path: ["endDate"],
+  });
+
 export type CreateUnitInput = z.infer<typeof createUnitSchema>;
 export type UpdateUnitInput = z.infer<typeof updateUnitSchema>;
 export type ListUnitsQuery = z.infer<typeof listUnitsQuerySchema>;
@@ -125,3 +143,4 @@ export type SetUnitAmenitiesInput = z.infer<typeof setUnitAmenitiesSchema>;
 export type CreateUnitImageInput = z.infer<typeof createUnitImageSchema>;
 export type UpdateUnitImageInput = z.infer<typeof updateUnitImageSchema>;
 export type CalendarQueryInput = z.infer<typeof calendarQuerySchema>;
+export type CreateRateRuleInput = z.infer<typeof createRateRuleSchema>;
