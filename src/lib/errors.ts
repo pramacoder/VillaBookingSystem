@@ -58,6 +58,17 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class ConflictError extends AppError {
+  constructor(
+    message = "The request conflicts with existing state.",
+    code: ErrorCode = "HAS_DEPENDENCIES",
+    details?: Record<string, unknown>,
+  ) {
+    super(code, 409, message, details);
+    this.name = "ConflictError";
+  }
+}
+
 export class RateLimitedError extends AppError {
   readonly retryAfterSeconds: number;
 
