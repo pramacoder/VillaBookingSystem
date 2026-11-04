@@ -1,16 +1,29 @@
-import type { Prisma, PrismaClient, Reservation, ReservationStatus } from "@prisma/client";
+import type {
+  Payment,
+  PaymentStatus,
+  Prisma,
+  PrismaClient,
+  Reservation,
+  ReservationSource,
+  ReservationStatus,
+} from "@prisma/client";
 import { formatDateOnly, parseDateOnly, todayInPropertyTz } from "@/lib/dates";
 import { isExclusionViolation } from "@/lib/db-constraints";
 import { AppError, NotFoundError } from "@/lib/errors";
-import { derivePaymentStatus } from "@/lib/payments";
+import { computeOverpaidIdr, derivePaymentStatus } from "@/lib/payments";
 import { generateReservationCode } from "@/lib/reservation-code";
 import {
   cancelReservationSchema,
+  listReservationsQuerySchema,
   publicInquirySchema,
   staffCreateReservationSchema,
   staffUpdateReservationSchema,
 } from "@/lib/validation/reservation";
-import { type DbOrTx, writeAuditLog } from "@/server/services/audit-service";
+import {
+  type AuditLogWithActor,
+  type DbOrTx,
+  writeAuditLog,
+} from "@/server/services/audit-service";
 import {
   BLOCKING_RESERVATION_STATUSES,
   assertUnitAvailable,
@@ -867,4 +880,337 @@ export async function cancelReservation(
       refundPending,
     };
   });
+}
+
+export interface ReservationListItem {
+  id: string;
+  code: string;
+  status: ReservationStatus;
+  paymentStatus: PaymentStatus;
+  source: ReservationSource;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  adults: number;
+  children: number;
+  totalIdr: number;
+  netPaidIdr: number;
+  balanceDueIdr: number;
+  overpaidIdr: number;
+  refundPending: boolean;
+  version: number;
+  createdAt: string;
+  unit: {
+    id: string;
+    slug: string;
+    nameEn: string;
+    nameId: string;
+  };
+  guest: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+  };
+}
+
+export interface ReservationListResult {
+  items: ReservationListItem[];
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+  };
+}
+
+/**
+ * Lists reservations for the admin dashboard/table with server-side filters, sorting, and pagination
+ * (FR-14, API.md §5.2, TC-U10, TC-U11).
+ */
+export async function listReservations(
+  prisma: PrismaClient,
+  rawQuery: unknown,
+): Promise<ReservationListResult> {
+  const query = listReservationsQuerySchema.parse(rawQuery ?? {});
+
+  const where: Prisma.ReservationWhereInput = {
+    ...(query.status ? { status: query.status } : {}),
+    ...(query.paymentStatus ? { paymentStatus: query.paymentStatus } : {}),
+    ...(query.unitId ? { unitId: query.unitId } : {}),
+    ...(query.source ? { source: query.source } : {}),
+    ...(query.from || query.to
+      ? {
+          checkIn: {
+            ...(query.from ? { gte: parseDateOnly(query.from) } : {}),
+            ...(query.to ? { lte: parseDateOnly(query.to) } : {}),
+          },
+        }
+      : {}),
+    ...(query.q && query.q.length > 0
+      ? {
+          OR: [
+            { code: { contains: query.q, mode: "insensitive" } },
+            { guest: { fullName: { contains: query.q, mode: "insensitive" } } },
+            { guest: { email: { contains: query.q, mode: "insensitive" } } },
+            { guest: { phone: { contains: query.q, mode: "insensitive" } } },
+            { unit: { nameEn: { contains: query.q, mode: "insensitive" } } },
+            { unit: { nameId: { contains: query.q, mode: "insensitive" } } },
+          ],
+        }
+      : {}),
+  };
+
+  const orderBy: Prisma.ReservationOrderByWithRelationInput[] = [
+    { [query.sortBy]: query.sortDir },
+    { id: "asc" },
+  ];
+
+  const skip = (query.page - 1) * query.pageSize;
+
+  const [total, rows] = await Promise.all([
+    prisma.reservation.count({ where }),
+    prisma.reservation.findMany({
+      where,
+      orderBy,
+      skip,
+      take: query.pageSize,
+      include: {
+        unit: {
+          select: {
+            id: true,
+            slug: true,
+            nameEn: true,
+            nameId: true,
+          },
+        },
+        guest: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const items: ReservationListItem[] = rows.map((row) => ({
+    id: row.id,
+    code: row.code,
+    status: row.status,
+    paymentStatus: row.paymentStatus,
+    source: row.source,
+    checkIn: formatDateOnly(row.checkIn),
+    checkOut: formatDateOnly(row.checkOut),
+    nights: row.nights,
+    adults: row.adults,
+    children: row.children,
+    totalIdr: row.totalIdr,
+    netPaidIdr: row.netPaidIdr,
+    balanceDueIdr: Math.max(row.totalIdr - row.netPaidIdr, 0),
+    overpaidIdr: computeOverpaidIdr(row.totalIdr, row.netPaidIdr),
+    refundPending: row.status === "CANCELLED" && row.netPaidIdr > 0,
+    version: row.version,
+    createdAt: row.createdAt.toISOString(),
+    unit: row.unit,
+    guest: row.guest,
+  }));
+
+  return {
+    items,
+    meta: {
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+    },
+  };
+}
+
+export interface PaymentWithActors extends Payment {
+  recordedBy: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+}
+
+export interface ReservationDetailResult {
+  id: string;
+  code: string;
+  status: ReservationStatus;
+  paymentStatus: PaymentStatus;
+  source: ReservationSource;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  adults: number;
+  children: number;
+  nightlySubtotalIdr: number;
+  cleaningFeeIdr: number;
+  discountIdr: number;
+  totalIdr: number;
+  netPaidIdr: number;
+  balanceDueIdr: number;
+  overpaidIdr: number;
+  refundPending: boolean;
+  pricingSnapshot: Prisma.JsonValue;
+  locale: string;
+  specialRequests: string | null;
+  internalNotes: string | null;
+  cancelReason: string | null;
+  confirmedAt: string | null;
+  checkedInAt: string | null;
+  checkedOutAt: string | null;
+  cancelledAt: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  allowedNextStatuses: readonly ReservationStatus[];
+  unit: {
+    id: string;
+    slug: string;
+    nameEn: string;
+    nameId: string;
+    baseRateIdr: number;
+    cleaningFeeIdr: number;
+    maxGuests: number;
+    minNights: number;
+    maxNights: number | null;
+    status: string;
+  };
+  guest: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+    country: string | null;
+    preferredLocale: string;
+    notes: string | null;
+  };
+  payments: PaymentWithActors[];
+  auditLogs: AuditLogWithActor[];
+}
+
+/**
+ * Retrieves full reservation detail including guest, unit, payment ledger, and audit trail
+ * (FR-14, FR-17, FR-20, API.md §5.2).
+ */
+export async function getReservationDetail(
+  prisma: PrismaClient,
+  reservationId: string,
+): Promise<ReservationDetailResult> {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    include: {
+      unit: {
+        select: {
+          id: true,
+          slug: true,
+          nameEn: true,
+          nameId: true,
+          baseRateIdr: true,
+          cleaningFeeIdr: true,
+          maxGuests: true,
+          minNights: true,
+          maxNights: true,
+          status: true,
+        },
+      },
+      guest: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          country: true,
+          preferredLocale: true,
+          notes: true,
+        },
+      },
+      payments: {
+        include: {
+          recordedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
+        },
+        orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+      },
+    },
+  });
+
+  if (!reservation) {
+    throw new NotFoundError("Reservation not found.");
+  }
+
+  const paymentIds = reservation.payments.map((p) => p.id);
+
+  const auditLogs = await prisma.auditLog.findMany({
+    where: {
+      OR: [
+        { entityType: "Reservation", entityId: reservation.id },
+        ...(paymentIds.length > 0 ? [{ entityType: "Payment", entityId: { in: paymentIds } }] : []),
+      ],
+    },
+    include: {
+      actor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+
+  const balanceDueIdr = Math.max(reservation.totalIdr - reservation.netPaidIdr, 0);
+  const overpaidIdr = computeOverpaidIdr(reservation.totalIdr, reservation.netPaidIdr);
+  const refundPending = reservation.status === "CANCELLED" && reservation.netPaidIdr > 0;
+
+  return {
+    id: reservation.id,
+    code: reservation.code,
+    status: reservation.status,
+    paymentStatus: reservation.paymentStatus,
+    source: reservation.source,
+    checkIn: formatDateOnly(reservation.checkIn),
+    checkOut: formatDateOnly(reservation.checkOut),
+    nights: reservation.nights,
+    adults: reservation.adults,
+    children: reservation.children,
+    nightlySubtotalIdr: reservation.nightlySubtotalIdr,
+    cleaningFeeIdr: reservation.cleaningFeeIdr,
+    discountIdr: reservation.discountIdr,
+    totalIdr: reservation.totalIdr,
+    netPaidIdr: reservation.netPaidIdr,
+    balanceDueIdr,
+    overpaidIdr,
+    refundPending,
+    pricingSnapshot: reservation.pricingSnapshot,
+    locale: reservation.locale,
+    specialRequests: reservation.specialRequests,
+    internalNotes: reservation.internalNotes,
+    cancelReason: reservation.cancelReason,
+    confirmedAt: reservation.confirmedAt ? reservation.confirmedAt.toISOString() : null,
+    checkedInAt: reservation.checkedInAt ? reservation.checkedInAt.toISOString() : null,
+    checkedOutAt: reservation.checkedOutAt ? reservation.checkedOutAt.toISOString() : null,
+    cancelledAt: reservation.cancelledAt ? reservation.cancelledAt.toISOString() : null,
+    version: reservation.version,
+    createdAt: reservation.createdAt.toISOString(),
+    updatedAt: reservation.updatedAt.toISOString(),
+    allowedNextStatuses: ALLOWED_STATUS_TRANSITIONS[reservation.status],
+    unit: reservation.unit,
+    guest: reservation.guest,
+    payments: reservation.payments,
+    auditLogs,
+  };
 }

@@ -2,6 +2,7 @@ import enMessages from "../../../messages/en.json";
 import idMessages from "../../../messages/id.json";
 
 export type SupportedLocale = "en" | "id";
+export type AppLocale = SupportedLocale;
 export type AppMessages = typeof enMessages;
 
 const dictionaries: Record<SupportedLocale, AppMessages> = {

@@ -60,6 +60,15 @@ export async function writeAuditLog(tx: DbOrTx, input: WriteAuditLogInput): Prom
   });
 }
 
+export interface AuditLogWithActor extends AuditLog {
+  actor: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+}
+
 export interface ListAuditLogsFilter {
   entityType?: string;
   entityId?: string;
@@ -71,7 +80,7 @@ export interface ListAuditLogsFilter {
 export async function listAuditLogs(
   prisma: PrismaClient,
   filter: ListAuditLogsFilter = {},
-): Promise<AuditLog[]> {
+): Promise<AuditLogWithActor[]> {
   return prisma.auditLog.findMany({
     where: {
       ...(filter.entityType ? { entityType: filter.entityType } : {}),
@@ -84,6 +93,16 @@ export async function listAuditLogs(
             },
           }
         : {}),
+    },
+    include: {
+      actor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: Math.min(Math.max(filter.limit ?? 50, 1), 200),

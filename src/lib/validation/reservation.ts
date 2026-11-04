@@ -91,6 +91,42 @@ export const staffUpdateReservationSchema = z
 export const cancelReservationSchema = z
   .object({
     reason: z.string().trim().min(1, "Cancellation reason is required.").max(500),
+    expectedVersion: z.number().int().min(1).optional(),
+  })
+  .strict();
+
+export const confirmReservationBodySchema = z
+  .object({
+    expectedVersion: z.number().int().min(1).optional(),
+  })
+  .strict();
+
+export const checkInReservationBodySchema = z
+  .object({
+    expectedVersion: z.number().int().min(1).optional(),
+    overrideEarlyCheckIn: z.boolean().optional(),
+  })
+  .strict();
+
+export const checkOutReservationBodySchema = z
+  .object({
+    expectedVersion: z.number().int().min(1).optional(),
+  })
+  .strict();
+
+export const listReservationsQuerySchema = z
+  .object({
+    status: z.enum(["PENDING", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED"]).optional(),
+    paymentStatus: z.enum(["UNPAID", "PARTIAL", "PAID"]).optional(),
+    unitId: z.string().trim().min(1).max(100).optional(),
+    source: z.enum(["WEBSITE", "ADMIN", "WHATSAPP", "PHONE", "OTHER"]).optional(),
+    from: dateOnlyString.optional(),
+    to: dateOnlyString.optional(),
+    q: z.string().trim().max(120).optional(),
+    sortBy: z.enum(["checkIn", "createdAt", "totalIdr", "code"]).default("checkIn"),
+    sortDir: z.enum(["asc", "desc"]).default("desc"),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
   })
   .strict();
 
@@ -109,4 +145,8 @@ export type PublicInquiryInput = z.infer<typeof publicInquirySchema>;
 export type StaffCreateReservationInput = z.infer<typeof staffCreateReservationSchema>;
 export type StaffUpdateReservationInput = z.infer<typeof staffUpdateReservationSchema>;
 export type CancelReservationInput = z.infer<typeof cancelReservationSchema>;
+export type ConfirmReservationBodyInput = z.infer<typeof confirmReservationBodySchema>;
+export type CheckInReservationBodyInput = z.infer<typeof checkInReservationBodySchema>;
+export type CheckOutReservationBodyInput = z.infer<typeof checkOutReservationBodySchema>;
+export type ListReservationsQuery = z.infer<typeof listReservationsQuerySchema>;
 export type CreateUnitBlockInput = z.infer<typeof createUnitBlockSchema>;

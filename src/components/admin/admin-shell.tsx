@@ -22,10 +22,7 @@ import {
 import { logoutAction } from "@/app/admin/actions";
 import { LanguageToggle } from "@/components/admin/language-toggle";
 import { ToastProvider } from "@/components/ui/toast";
-import { isNavItemActive } from "@/lib/admin-nav";
 import type { AppMessages, SupportedLocale } from "@/lib/i18n/messages";
-
-export { isNavItemActive };
 
 export interface AdminShellUser {
   id: string;
@@ -40,6 +37,13 @@ export interface AdminNavItem {
   label: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+}
+
+export function isNavItemActive(pathname: string, itemHref: string): boolean {
+  if (itemHref === "/admin") {
+    return pathname === "/admin";
+  }
+  return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
 }
 
 export function AdminShell({

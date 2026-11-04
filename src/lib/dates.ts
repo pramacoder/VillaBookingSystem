@@ -104,6 +104,8 @@ export function addDaysDateOnly(value: Date | string, days: number): Date {
   return new Date(base.getTime() + days * MS_PER_DAY);
 }
 
+export const addDays = addDaysDateOnly;
+
 /**
  * Computes the number of stay nights between checkIn and checkOut (`checkOut - checkIn`).
  */
