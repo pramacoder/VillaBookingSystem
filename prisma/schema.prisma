@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled connection (runtime)
+  directUrl = env("DIRECT_URL")   // direct connection (migrations)
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+enum UnitStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+enum ReservationSource {
+  WEBSITE
+  ADMIN
+  WHATSAPP
+  PHONE
+  OTHER
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  QRIS
+  CARD_EXTERNAL
+  OTHER
+}
+
+enum PaymentKind {
+  PAYMENT
+  REFUND
+}
+
+enum BlockReason {
+  MAINTENANCE
+  OWNER_USE
+  OTHER
+}
+
+enum AmenityCategory {
+  IN_VILLA
+  OUTDOOR
+  SERVICES
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique // stored lowercase
+  name             String
+  passwordHash     String
+  role             UserRole  @default(STAFF)
+  isActive         Boolean   @default(true)
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  reservations Reservation[] @relation("ReservationCreatedBy")
+  payments     Payment[]     @relation("PaymentRecordedBy")
+  auditLogs    AuditLog[]
+}
+
+model Unit {
+  id             String     @id @default(cuid())
+  slug           String     @unique
+  status         UnitStatus @default(DRAFT)
+  nameEn         String
+  nameId         String
+  summaryEn      String
+  summaryId      String
+  descriptionEn  String
+  descriptionId  String
+  maxGuests      Int
+  bedrooms       Int
+  bathrooms      Int
+  areaSqm        Int?
+  baseRateIdr    Int
+  cleaningFeeIdr Int        @default(0)
+  minNights      Int        @default(1)
+  maxNights      Int?
+  isFeatured     Boolean    @default(false)
+  sortOrder      Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  images       UnitImage[]
+  amenities    UnitAmenity[]
+  rateRules    RateRule[]
+  blocks       UnitBlock[]
+  reservations Reservation[]
+
+  @@index([status, sortOrder])
+}
+
+model UnitImage {
+  id         String    @id @default(cuid())
+  unitId     String
+  path       String // e.g. /images/units/garden-1.webp
+  altEn      String
+  altId      String
+  isCover    Boolean   @default(false)
+  sortOrder  Int       @default(0)
+  // Asset manifest (see CONTENT_GUIDE §8)
+  source     String
+  license    String
+  credit     String?
+  obtainedOn DateTime? @db.Date
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, sortOrder])
+}
+
+model Amenity {
+  id       String          @id @default(cuid())
+  key      String          @unique // e.g. "air_conditioning"
+  nameEn   String
+  nameId   String
+  category AmenityCategory
+  icon     String? // lucide icon name
+
+  units UnitAmenity[]
+}
+
+model UnitAmenity {
+  unitId    String
+  amenityId String
+  unit      Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  amenity   Amenity @relation(fields: [amenityId], references: [id], onDelete: Restrict)
+
+  @@id([unitId, amenityId])
+}
+
+model RateRule {
+  // P1: seasonal override; most specific, latest wins
+  id             String   @id @default(cuid())
+  unitId         String
+  label          String
+  startDate      DateTime @db.Date
+  endDate        DateTime @db.Date // inclusive
+  nightlyRateIdr Int
+  minNights      Int?
+  createdAt      DateTime @default(now())
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, startDate, endDate])
+}
+
+model UnitBlock {
+  id          String      @id @default(cuid())
+  unitId      String
+  startDate   DateTime    @db.Date
+  endDate     DateTime    @db.Date // exclusive, same [start,end) semantics
+  reason      BlockReason
+  note        String?
+  createdById String?
+  createdAt   DateTime    @default(now())
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, startDate, endDate])
+}
+
+model Guest {
+  id              String   @id @default(cuid())
+  fullName        String
+  email           String?
+  emailNormalized String?  @unique // lowercase/trimmed; null if absent
+  phone           String?
+  phoneNormalized String? // digits with country code
+  country         String? // ISO 3166-1 alpha-2
+  preferredLocale String   @default("en")
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  reservations Reservation[]
+
+  @@index([phoneNormalized])
+  @@index([fullName])
+}
+
+model Reservation {
+  id       String            @id @default(cuid())
+  code     String            @unique // e.g. SGV-2611-K7P2
+  version  Int               @default(1) // optimistic concurrency
+  unitId   String
+  guestId  String
+  status   ReservationStatus @default(PENDING)
+  source   ReservationSource @default(WEBSITE)
+  checkIn  DateTime          @db.Date
+  checkOut DateTime          @db.Date
+  nights   Int
+  adults   Int
+  children Int               @default(0)
+
+  nightlySubtotalIdr Int
+  cleaningFeeIdr     Int           @default(0)
+  discountIdr        Int           @default(0)
+  totalIdr           Int
+  netPaidIdr         Int           @default(0) // derived
+  paymentStatus      PaymentStatus @default(UNPAID) // derived
+  pricingSnapshot    Json // per-night breakdown
+
+  locale          String    @default("en")
+  specialRequests String?
+  internalNotes   String?
+  confirmedAt     DateTime?
+  checkedInAt     DateTime?
+  checkedOutAt    DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdById     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  unit      Unit      @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  guest     Guest     @relation(fields: [guestId], references: [id], onDelete: Restrict)
+  createdBy User?     @relation("ReservationCreatedBy", fields: [createdById], references: [id])
+  payments  Payment[]
+
+  @@index([unitId, checkIn, checkOut])
+  @@index([status, checkIn])
+  @@index([paymentStatus])
+  @@index([guestId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  reservationId String
+  kind          PaymentKind   @default(PAYMENT)
+  amountIdr     Int // always > 0; kind decides sign
+  method        PaymentMethod
+  paidAt        DateTime // when money moved (timestamp)
+  reference     String? // transfer ref, receipt no.
+  note          String?
+  recordedById  String
+  createdAt     DateTime      @default(now())
+  voidedAt      DateTime?
+  voidReason    String?
+  voidedById    String?
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  recordedBy  User        @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+
+  @@index([reservationId])
+  @@index([paidAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String // e.g. "reservation.confirm"
+  entityType String
+  entityId   String
+  metadata   Json? // changed fields; no secrets, no passwords
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
