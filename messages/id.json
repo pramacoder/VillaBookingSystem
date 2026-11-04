@@ -1,0 +1,136 @@
+{
+  "brand": {
+    "name": "Sagara Villas",
+    "tagline": "Calm Stays, Close to the Shore.",
+    "demoDisclosure": "Proyek demonstrasi portofolio — properti, tarif, dan ketersediaan bersifat fiktif."
+  },
+  "public": {
+    "requestBooking": "Ajukan Reservasi",
+    "bookingRequest": "Permintaan Reservasi",
+    "villas": "Villa",
+    "unit": "Unit",
+    "facilities": "Fasilitas",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "guests": "Tamu",
+    "adults": "Dewasa",
+    "children": "Anak",
+    "viewDetails": "Lihat Detail",
+    "demoRate": "Tarif demo",
+    "perNight": "Per malam",
+    "contactUs": "Hubungi Kami",
+    "heroTitle": "Menginap Tenang di Tepi Pantai.",
+    "heroSubtitle": "Pilih unit villa, cek tanggal, lalu ajukan permintaan reservasi. Tim kami akan mengonfirmasi secara langsung.",
+    "heroCta": "Jelajahi Villa Kami",
+    "privacyConsent": "Dengan mengirim, Anda menyetujui bahwa informasi yang Anda berikan disimpan dan digunakan untuk menanggapi permintaan Anda. Ini adalah demo: mengirim permintaan tidak membuat reservasi yang telah dikonfirmasi.",
+    "requestSuccess": "Permintaan diterima. Kode referensi Anda {code}. Ini bukan reservasi yang telah dikonfirmasi. Tim kami akan menghubungi Anda."
+  },
+  "statuses": {
+    "reservation": {
+      "PENDING": "Menunggu",
+      "CONFIRMED": "Terkonfirmasi",
+      "CHECKED_IN": "Sudah check-in",
+      "CHECKED_OUT": "Sudah check-out",
+      "CANCELLED": "Dibatalkan"
+    },
+    "payment": {
+      "UNPAID": "Belum dibayar",
+      "PARTIAL": "Dibayar sebagian",
+      "PAID": "Lunas"
+    },
+    "unit": {
+      "DRAFT": "Draf",
+      "ACTIVE": "Aktif",
+      "ARCHIVED": "Diarsipkan"
+    }
+  },
+  "admin": {
+    "consoleBadge": "Konsol Operasional",
+    "nav": {
+      "dashboard": "Dasbor",
+      "calendar": "Kalender",
+      "reservations": "Reservasi",
+      "guests": "Tamu",
+      "units": "Unit",
+      "reports": "Laporan",
+      "users": "Pengguna",
+      "collapseSidebar": "Ciutkan bilah sisi",
+      "expandSidebar": "Bentangkan bilah sisi",
+      "openMenu": "Buka menu navigasi",
+      "closeMenu": "Tutup menu navigasi",
+      "languageLabel": "Bahasa",
+      "signedInAs": "Masuk sebagai",
+      "signOut": "Keluar"
+    },
+    "common": {
+      "required": "(wajib)",
+      "cancel": "Batal",
+      "retry": "Coba lagi",
+      "loading": "Memuat data…",
+      "reasonLabel": "Alasan",
+      "reasonPlaceholder": "Berikan alasan operasional yang jelas",
+      "paginationShowing": "Menampilkan {from}–{to} dari {total}",
+      "previousPage": "Sebelumnya",
+      "nextPage": "Berikutnya"
+    },
+    "login": {
+      "eyebrow": "Akses Staf & Administrator",
+      "title": "Masuk ke Sagara Villas",
+      "subtitle": "Masukkan kredensial akun operasional Anda untuk mengelola reservasi, ketersediaan unit, dan pembayaran manual.",
+      "emailLabel": "Email kerja",
+      "emailPlaceholder": "nama@sagaravillas.example.com",
+      "passwordLabel": "Kata sandi",
+      "passwordPlaceholder": "Masukkan kata sandi Anda",
+      "submitButton": "Masuk",
+      "submittingButton": "Sedang masuk…",
+      "invalidCredentials": "Email atau kata sandi salah.",
+      "rateLimited": "Terlalu banyak percobaan masuk. Silakan tunggu 15 menit.",
+      "demoNotice": "Lingkungan demonstrasi portofolio — khusus akun staf resmi."
+    },
+    "dashboard": {
+      "title": "Dasbor",
+      "subtitle": "Ringkasan operasional kedatangan, keberangkatan, permintaan menunggu, dan sisa tagihan dalam zona waktu Asia/Makassar.",
+      "forbiddenNotice": "Peran akun Anda (STAFF) tidak memiliki izin untuk mengakses pengaturan khusus Administrator.",
+      "arrivalsToday": "Kedatangan hari ini",
+      "departuresToday": "Keberangkatan hari ini",
+      "inHouseGuests": "Tamu menginap",
+      "pendingRequests": "Permintaan menunggu",
+      "outstandingBalance": "Sisa tagihan",
+      "occupancy30d": "Unit aktif",
+      "recentReservationsTitle": "Reservasi & Permintaan Terbaru",
+      "recentReservationsSubtitle": "Daftar masa inap terbaru berdasarkan tanggal check-in.",
+      "colCode": "Kode",
+      "colGuest": "Tamu",
+      "colUnit": "Unit",
+      "colDates": "Tanggal",
+      "colStatus": "Status",
+      "colPayment": "Pembayaran",
+      "colTotal": "Total",
+      "emptyReservationsTitle": "Belum ada reservasi tercatat",
+      "emptyReservationsBody": "Permintaan reservasi publik dan reservasi staf akan muncul di sini."
+    },
+    "sections": {
+      "calendarTitle": "Kalender",
+      "calendarSubtitle": "Linimasa unit villa, reservasi berdasarkan status, dan blokir pemeliharaan.",
+      "reservationsTitle": "Reservasi",
+      "reservationsSubtitle": "Cari, saring, konfirmasi, check-in, check-out, dan kelola reservasi tamu.",
+      "guestsTitle": "Tamu",
+      "guestsSubtitle": "Direktori tamu, riwayat kontak, dan catatan menginap.",
+      "unitsTitle": "Unit",
+      "unitsSubtitle": "Inventaris villa, kapasitas, fasilitas, dan tarif demo per malam.",
+      "reportsTitle": "Laporan",
+      "reportsSubtitle": "Laporan reservasi, pembayaran manual, okupansi, dan kedatangan/keberangkatan dengan ekspor CSV aman-formula.",
+      "usersTitle": "Pengguna",
+      "usersSubtitle": "Direktori akun operasional khusus Administrator. Hash kata sandi tidak pernah ditampilkan."
+    },
+    "usersPage": {
+      "tableCaption": "Daftar pengguna operasional terdaftar",
+      "colName": "Nama",
+      "colEmail": "Email",
+      "colRole": "Peran",
+      "colStatus": "Status",
+      "statusActive": "Aktif",
+      "statusInactive": "Nonaktif"
+    }
+  }
+}

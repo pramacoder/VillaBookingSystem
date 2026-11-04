@@ -1,0 +1,136 @@
+{
+  "brand": {
+    "name": "Sagara Villas",
+    "tagline": "Calm Stays, Close to the Shore.",
+    "demoDisclosure": "Portfolio demonstration project — fictional property, rates, and availability."
+  },
+  "public": {
+    "requestBooking": "Request Booking",
+    "bookingRequest": "Booking Request",
+    "villas": "Villas",
+    "unit": "Unit",
+    "facilities": "Facilities",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "guests": "Guests",
+    "adults": "Adults",
+    "children": "Children",
+    "viewDetails": "View Details",
+    "demoRate": "Demo rate",
+    "perNight": "Per night",
+    "contactUs": "Contact Us",
+    "heroTitle": "A Quiet Stay by the Coast.",
+    "heroSubtitle": "Choose from our villa units, check the dates, and send a booking request. Our team confirms personally.",
+    "heroCta": "Explore Our Villas",
+    "privacyConsent": "By submitting, you agree that the information you provide is stored and used to respond to your request. This is a demo: submitting a request does not create a confirmed reservation.",
+    "requestSuccess": "Request received. Your reference is {code}. This is not a confirmed reservation. Our team will contact you."
+  },
+  "statuses": {
+    "reservation": {
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
+      "CHECKED_IN": "Checked in",
+      "CHECKED_OUT": "Checked out",
+      "CANCELLED": "Cancelled"
+    },
+    "payment": {
+      "UNPAID": "Unpaid",
+      "PARTIAL": "Partially paid",
+      "PAID": "Paid"
+    },
+    "unit": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived"
+    }
+  },
+  "admin": {
+    "consoleBadge": "Operations Console",
+    "nav": {
+      "dashboard": "Dashboard",
+      "calendar": "Calendar",
+      "reservations": "Reservations",
+      "guests": "Guests",
+      "units": "Units",
+      "reports": "Reports",
+      "users": "Users",
+      "collapseSidebar": "Collapse sidebar",
+      "expandSidebar": "Expand sidebar",
+      "openMenu": "Open navigation menu",
+      "closeMenu": "Close navigation menu",
+      "languageLabel": "Language",
+      "signedInAs": "Signed in as",
+      "signOut": "Sign out"
+    },
+    "common": {
+      "required": "(required)",
+      "cancel": "Cancel",
+      "retry": "Try again",
+      "loading": "Loading data…",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Provide a clear operational reason",
+      "paginationShowing": "Showing {from}–{to} of {total}",
+      "previousPage": "Previous",
+      "nextPage": "Next"
+    },
+    "login": {
+      "eyebrow": "Staff & Administrator Access",
+      "title": "Sign in to Sagara Villas",
+      "subtitle": "Enter your operational account credentials to manage reservations, availability, and manual payments.",
+      "emailLabel": "Work email",
+      "emailPlaceholder": "name@sagaravillas.example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "submitButton": "Sign in",
+      "submittingButton": "Signing in…",
+      "invalidCredentials": "Email or password is incorrect.",
+      "rateLimited": "Too many sign-in attempts. Please wait 15 minutes.",
+      "demoNotice": "Portfolio demonstration environment — authorized staff accounts only."
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Operational summary of arrivals, departures, pending requests, and balances in Asia/Makassar time.",
+      "forbiddenNotice": "Your account role (STAFF) does not have permission to access Administrator-only settings.",
+      "arrivalsToday": "Arrivals today",
+      "departuresToday": "Departures today",
+      "inHouseGuests": "In-house stays",
+      "pendingRequests": "Pending requests",
+      "outstandingBalance": "Outstanding balance",
+      "occupancy30d": "Active units",
+      "recentReservationsTitle": "Recent Reservations & Requests",
+      "recentReservationsSubtitle": "Latest stays ordered by check-in date.",
+      "colCode": "Code",
+      "colGuest": "Guest",
+      "colUnit": "Unit",
+      "colDates": "Dates",
+      "colStatus": "Status",
+      "colPayment": "Payment",
+      "colTotal": "Total",
+      "emptyReservationsTitle": "No reservations recorded yet",
+      "emptyReservationsBody": "New public booking requests and staff reservations will appear here."
+    },
+    "sections": {
+      "calendarTitle": "Calendar",
+      "calendarSubtitle": "Resource timeline of villa units, reservations by status, and maintenance blocks.",
+      "reservationsTitle": "Reservations",
+      "reservationsSubtitle": "Search, filter, confirm, check in, check out, and manage guest reservations.",
+      "guestsTitle": "Guests",
+      "guestsSubtitle": "Guest directory, contact history, and stay records.",
+      "unitsTitle": "Units",
+      "unitsSubtitle": "Villa inventory, capacities, amenities, and demo nightly rates.",
+      "reportsTitle": "Reports",
+      "reportsSubtitle": "Reservations, manual payments, occupancy, and arrivals/departures with formula-safe CSV export.",
+      "usersTitle": "Users",
+      "usersSubtitle": "Administrator-only directory of operational accounts. Password hashes are never exposed."
+    },
+    "usersPage": {
+      "tableCaption": "Registered operational users",
+      "colName": "Name",
+      "colEmail": "Email",
+      "colRole": "Role",
+      "colStatus": "Status",
+      "statusActive": "Active",
+      "statusInactive": "Inactive"
+    }
+  }
+}
