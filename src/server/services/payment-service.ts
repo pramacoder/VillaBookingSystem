@@ -63,6 +63,7 @@ export async function recordPayment(
         reference: input.reference ?? null,
         note: input.note ?? null,
         recordedById: params.actorId,
+        createdAt: now,
       },
     });
 

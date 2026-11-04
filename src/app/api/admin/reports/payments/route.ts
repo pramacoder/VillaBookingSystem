@@ -28,4 +28,3 @@ export async function GET(request: Request): Promise<Response> {
     return toErrorResponse(err, { requestId, isAdminRoute: true });
   }
 }
-

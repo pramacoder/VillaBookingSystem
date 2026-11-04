@@ -562,3 +562,245 @@ export async function listAllAmenities(prisma: PrismaClient): Promise<Amenity[]>
     orderBy: [{ category: "asc" }, { nameEn: "asc" }],
   });
 }
+
+// ==========================================
+// PUBLIC UNIT SERVICES (API §3.1, §3.2, §3.3)
+// ==========================================
+
+export interface PublicUnitSummary {
+  id: string;
+  slug: string;
+  name: string;
+  summary: string;
+  bedrooms: number;
+  bathrooms: number;
+  maxGuests: number;
+  areaSqm: number | null;
+  baseRateIdr: number;
+  cleaningFeeIdr: number;
+  minNights: number;
+  maxNights: number | null;
+  isFeatured: boolean;
+  coverImage: { path: string; alt: string } | null;
+  amenities: Array<{
+    id: string;
+    key: string;
+    name: string;
+    category: string;
+    icon: string | null;
+  }>;
+  isDemo: true;
+}
+
+export async function listPublicUnits(
+  prisma: PrismaClient,
+  locale: "en" | "id" = "en",
+): Promise<PublicUnitSummary[]> {
+  const isId = locale === "id";
+  const units = await prisma.unit.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    include: {
+      images: {
+        where: { isCover: true },
+        take: 1,
+        select: { path: true, altEn: true, altId: true },
+      },
+      amenities: {
+        include: { amenity: true },
+      },
+    },
+  });
+
+  return units.map((u) => {
+    const cover = u.images[0]
+      ? { path: u.images[0].path, alt: isId ? u.images[0].altId : u.images[0].altEn }
+      : null;
+
+    return {
+      id: u.id,
+      slug: u.slug,
+      name: isId ? u.nameId : u.nameEn,
+      summary: isId ? u.summaryId : u.summaryEn,
+      bedrooms: u.bedrooms,
+      bathrooms: u.bathrooms,
+      maxGuests: u.maxGuests,
+      areaSqm: u.areaSqm,
+      baseRateIdr: u.baseRateIdr,
+      cleaningFeeIdr: u.cleaningFeeIdr,
+      minNights: u.minNights,
+      maxNights: u.maxNights,
+      isFeatured: u.isFeatured,
+      coverImage: cover,
+      amenities: u.amenities.map((ua) => ({
+        id: ua.amenity.id,
+        key: ua.amenity.key,
+        name: isId ? ua.amenity.nameId : ua.amenity.nameEn,
+        category: ua.amenity.category,
+        icon: ua.amenity.icon,
+      })),
+      isDemo: true,
+    };
+  });
+}
+
+export interface PublicUnitDetail extends PublicUnitSummary {
+  description: string;
+  images: Array<{
+    id: string;
+    path: string;
+    alt: string;
+    isCover: boolean;
+    sortOrder: number;
+  }>;
+  houseRules: {
+    checkInTime: string;
+    checkOutTime: string;
+    quietHours: string;
+    smoking: string;
+    pets: string;
+  };
+}
+
+export async function getPublicUnitBySlug(
+  prisma: PrismaClient,
+  slug: string,
+  locale: "en" | "id" = "en",
+): Promise<PublicUnitDetail> {
+  const isId = locale === "id";
+  const unit = await prisma.unit.findUnique({
+    where: { slug },
+    include: {
+      images: {
+        orderBy: [{ isCover: "desc" }, { sortOrder: "asc" }, { id: "asc" }],
+      },
+      amenities: {
+        include: { amenity: true },
+      },
+    },
+  });
+
+  if (!unit || unit.status !== "ACTIVE") {
+    throw new NotFoundError("Unit not found.");
+  }
+
+  const cover = unit.images.find((img) => img.isCover) ?? unit.images[0] ?? null;
+
+  return {
+    id: unit.id,
+    slug: unit.slug,
+    name: isId ? unit.nameId : unit.nameEn,
+    summary: isId ? unit.summaryId : unit.summaryEn,
+    description: isId ? unit.descriptionId : unit.descriptionEn,
+    bedrooms: unit.bedrooms,
+    bathrooms: unit.bathrooms,
+    maxGuests: unit.maxGuests,
+    areaSqm: unit.areaSqm,
+    baseRateIdr: unit.baseRateIdr,
+    cleaningFeeIdr: unit.cleaningFeeIdr,
+    minNights: unit.minNights,
+    maxNights: unit.maxNights,
+    isFeatured: unit.isFeatured,
+    coverImage: cover ? { path: cover.path, alt: isId ? cover.altId : cover.altEn } : null,
+    images: unit.images.map((img) => ({
+      id: img.id,
+      path: img.path,
+      alt: isId ? img.altId : img.altEn,
+      isCover: img.isCover,
+      sortOrder: img.sortOrder,
+    })),
+    amenities: unit.amenities.map((ua) => ({
+      id: ua.amenity.id,
+      key: ua.amenity.key,
+      name: isId ? ua.amenity.nameId : ua.amenity.nameEn,
+      category: ua.amenity.category,
+      icon: ua.amenity.icon,
+    })),
+    houseRules: {
+      checkInTime: "14:00 WITA",
+      checkOutTime: "11:00 WITA",
+      quietHours: isId ? "22:00 – 07:00 WITA" : "10:00 PM – 7:00 AM WITA",
+      smoking: isId ? "Dilarang merokok di dalam kamar" : "Non-smoking inside villas",
+      pets: isId ? "Hewan peliharaan tidak diperkenankan" : "No pets allowed",
+    },
+    isDemo: true,
+  };
+}
+
+export interface PublicAvailabilityResult {
+  unit: string;
+  blockedRanges: Array<[string, string]>;
+  minNights: number;
+  maxNights: number | null;
+}
+
+export async function getPublicUnitAvailability(
+  prisma: PrismaClient,
+  slug: string,
+  rawFrom?: string,
+  rawTo?: string,
+): Promise<PublicAvailabilityResult> {
+  const unit = await prisma.unit.findUnique({
+    where: { slug },
+    select: { id: true, slug: true, status: true, minNights: true, maxNights: true },
+  });
+
+  if (!unit || unit.status !== "ACTIVE") {
+    throw new NotFoundError("Unit not found.");
+  }
+
+  const today = todayInPropertyTz();
+  const defaultFrom = formatDateOnly(today);
+  const defaultTo = formatDateOnly(
+    new Date(Date.UTC(today.getUTCFullYear() + 1, today.getUTCMonth(), today.getUTCDate())),
+  );
+
+  const fromStr = rawFrom || defaultFrom;
+  const toStr = rawTo || defaultTo;
+
+  const fromDate = new Date(`${fromStr}T00:00:00.000Z`);
+  const toDate = new Date(`${toStr}T00:00:00.000Z`);
+
+  // 1. Blocking reservations in range (CONFIRMED, CHECKED_IN, CHECKED_OUT)
+  const reservations = await prisma.reservation.findMany({
+    where: {
+      unitId: unit.id,
+      status: { in: [...BLOCKING_RESERVATION_STATUSES] },
+      checkIn: { lt: toDate },
+      checkOut: { gt: fromDate },
+    },
+    select: { checkIn: true, checkOut: true },
+    orderBy: { checkIn: "asc" },
+  });
+
+  // 2. Unit blocks in range
+  const blocks = await prisma.unitBlock.findMany({
+    where: {
+      unitId: unit.id,
+      startDate: { lt: toDate },
+      endDate: { gt: fromDate },
+    },
+    select: { startDate: true, endDate: true },
+    orderBy: { startDate: "asc" },
+  });
+
+  const blockedRanges: Array<[string, string]> = [];
+
+  for (const r of reservations) {
+    blockedRanges.push([formatDateOnly(r.checkIn), formatDateOnly(r.checkOut)]);
+  }
+
+  for (const b of blocks) {
+    blockedRanges.push([formatDateOnly(b.startDate), formatDateOnly(b.endDate)]);
+  }
+
+  // Sort ranges chronologically
+  blockedRanges.sort((a, b) => a[0].localeCompare(b[0]));
+
+  return {
+    unit: unit.slug,
+    blockedRanges,
+    minNights: unit.minNights,
+    maxNights: unit.maxNights,
+  };
+}
