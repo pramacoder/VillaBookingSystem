@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+build
+coverage
+dist
+assets
+docs
+AGENTS.md
+README.md
+SECURITY.md
+prisma/migrations
+package-lock.json
+

@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sagara-villas-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sagara}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sagara_local_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-sagara_villas}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - sagara_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-sagara} -d $${POSTGRES_DB:-sagara_villas}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sagara_pgdata:
