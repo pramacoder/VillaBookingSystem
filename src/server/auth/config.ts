@@ -96,16 +96,26 @@ export function createAuthConfig(
 
           const rateLimit = checkRateLimit({
             key: `login:ip:${clientIp}`,
-            limit: 10,
+            limit: 15,
             windowMs: 15 * 60 * 1000,
           });
           if (!rateLimit.allowed) {
             return null;
           }
 
-          const result = await authenticateWithCredentials(db, credentials, {
-            clientIp,
-          });
+          const email =
+            typeof credentials?.email === "string" ? credentials.email.trim() : "";
+          const password =
+            typeof credentials?.password === "string" ? credentials.password : "";
+
+          const result = await authenticateWithCredentials(
+            db,
+            { email, password },
+            {
+              clientIp,
+              skipIpRateLimit: true,
+            },
+          );
 
           if (!result.ok) {
             return null;

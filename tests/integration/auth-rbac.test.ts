@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import type { Session } from "next-auth";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { authenticateWithCredentials } from "@/server/auth/credentials";
+import { createAuthConfig } from "@/server/auth/config";
 import { hashPassword } from "@/server/auth/password";
 import { requireRole } from "@/server/auth/require-role";
 
@@ -325,5 +326,46 @@ describe("M2 Auth, Lockout, and RBAC Integration Suite (TC-X02, TC-X04, TC-X05, 
         prisma,
       }),
     ).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+  });
+
+  it("TC-X15: credentials provider authorize extracts email/password and tolerates Auth.js metadata like csrfToken and callbackUrl without strict schema rejection", async () => {
+    const passwordHash = await hashPassword(STRONG_PASS);
+    const email = `${TEST_EMAIL_PREFIX}provider@sagaravillas.example.com`;
+
+    await prisma.user.create({
+      data: {
+        email,
+        name: "Provider Test Staff",
+        role: "STAFF",
+        passwordHash,
+        isActive: true,
+      },
+    });
+
+    const config = createAuthConfig(prisma);
+    const credProvider = config.providers.find((p: any) =>
+      typeof p === "function" ? p().id === "credentials" : p.id === "credentials",
+    );
+    const provider = typeof credProvider === "function" ? credProvider() : credProvider;
+    expect(provider).toBeDefined();
+
+    // Pass credentials with internal Auth.js fields
+    const req = new Request("http://localhost:3000/admin/login", {
+      headers: { "x-forwarded-for": "192.168.1.100" },
+    });
+    const authorizeFn = provider.options?.authorize ?? provider.authorize;
+    const authUser = await authorizeFn(
+      {
+        email,
+        password: STRONG_PASS,
+        csrfToken: "mock-csrf-token-xyz",
+        callbackUrl: "http://localhost:3000/admin",
+      },
+      req,
+    );
+
+    expect(authUser).not.toBeNull();
+    expect(authUser?.email).toBe(email);
+    expect(authUser?.role).toBe("STAFF");
   });
 });
