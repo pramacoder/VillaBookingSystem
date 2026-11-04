@@ -20,3 +20,4 @@ export async function DELETE(request: Request, context: RouteContext): Promise<R
     return toErrorResponse(err, { requestId, isAdminRoute: true });
   }
 }
+
